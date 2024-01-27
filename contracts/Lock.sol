@@ -7,31 +7,25 @@ contract Lock is Ownable{
     uint public lockAmount = 1 ether;
     bool public pause;
 
-    mapping(address => LockData) public userLocked;
-
-    struct LockData{
-        uint amount;
-        uint lockTime;
-    }
+    mapping(address => uint) public userLockedTime;
 
     event Locked(address indexed user, uint indexed amount,uint indexed unLockTime);
     event UnLocked(address indexed user, uint indexed amount,uint indexed remaining);
 
     function lock()external payable {
         require(!pause,"pause true.");
-        require(userLocked[msg.sender].amount == 0,"user already locked.");
+        require(userLockedTime[msg.sender] == 0,"user already locked.");
         require(msg.value>=lockAmount,"msg.value so below");
-        userLocked[msg.sender] = LockData(lockAmount,unLockTime + block.timestamp);
+        userLockedTime[msg.sender] = unLockTime + block.timestamp;
         _withdraw(address(this),lockAmount);
-        emit Locked(msg.sender,lockAmount,userLocked[msg.sender].lockTime);
+        emit Locked(msg.sender,lockAmount,userLockedTime[msg.sender]);
     }
 
     function unLock(uint _amount)external{
-        require(userLocked[msg.sender].amount >= _amount,"user amount error.");
-        require(userLocked[msg.sender].lockTime <= block.timestamp,"user amount error.");
-        userLocked[msg.sender].amount -= _amount;
+        require(userLockedTime[msg.sender] > lockAmount,"user amount error.");
+        require(userLockedTime[msg.sender] <= block.timestamp,"user amount error.");
         _withdraw(msg.sender,_amount);
-        emit UnLocked(msg.sender,_amount,userLocked[msg.sender].amount);
+        emit UnLocked(msg.sender,_amount,userLockedTime[msg.sender]);
     }
 
     function _withdraw(address _to,uint _amount) private {

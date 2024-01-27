@@ -9,7 +9,7 @@ const privateKey = process.env.PRIVATE_KEY?.toString()||'';
 const privateKey2 = process.env.PRIVATE_KEY2?.toString()||'';
 
 const config: HardhatUserConfig = {
-  defaultNetwork: 'hardhat',
+  defaultNetwork: 'aiaTest',
   networks: {
     aiaTest: {
       url: "http://http-testnet.aitd.io",

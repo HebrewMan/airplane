@@ -13,15 +13,15 @@ contract Airplane is ERC1155, Ownable, ERC1155Supply,ERC1155Burnable,Withdraw{
     string public name;
     string public baseURI;
 
-    uint public basePrice = 1 ether;
+    uint public counter;
 
-    address public signer = 0xa89CDa0dB7e7fEa6cb46b00cd3ee293ae1967926;
+    address public signer = 0x34D1330e3BA0B2cfB0fa606CAD0850Dc3eDDdCcd;
     mapping(address=>uint) public userNonce;
     mapping(address=>bool) public mintFree;
 
     uint[] public airplanePrice = [1 ether,2 ether,3 ether,4 ether];
 
-    event Minted(uint indexed id,uint indexed amount,uint indexed price,string inviteCode);
+    event Minted(uint id,uint indexed itemId,uint indexed amount,uint indexed price, string inviteCode);
 
     constructor(
         string memory _name,
@@ -55,13 +55,20 @@ contract Airplane is ERC1155, Ownable, ERC1155Supply,ERC1155Burnable,Withdraw{
         uint amount
     ) public{
         require(!mintFree[msg.sender],"The user has already minted.");
+        counter++;
         mintFree[msg.sender] = true;
         _mint(account, 0, 1, "0x");
-        emit Minted(id, amount,0,"0x");
+        emit Minted(id, counter,amount,0,"0x");
     }
 
-    function mintBySignForRewrads(address account,uint id,uint nonce,bytes calldata signatrue)external{
+    function mintBySignForRewrads(address account,uint id,uint nonce,bytes calldata signature)external{
+        require(userNonce[msg.sender] == nonce,"Nonce: Nonce error");
 
+        bytes32 _msgHash = getUserMessageHash(account,id,nonce);
+        require(verify(_msgHash, signature), "Signature: Error signature.");
+        _mint(account, id, 1, "0x");
+        counter++;
+        emit Minted(id, counter,1,0,"0x");
     }
 
     function mint(
@@ -70,11 +77,14 @@ contract Airplane is ERC1155, Ownable, ERC1155Supply,ERC1155Burnable,Withdraw{
         uint256 amount,
         string calldata inviteCode
     ) public payable{
-        require(airplanePrice[id]>0,"The current id does not exist.");
-        require(msg.value >= airplanePrice[id]*amount);
+        require(airplanePrice[id-1]>0,"The current id does not exist.");
+        require(msg.value >= airplanePrice[id-1]*amount);
+        counter++;
         _mint(account, id, amount, "0x");
-        emit Minted(id, amount,airplanePrice[id]*amount,inviteCode);
+        _withdraw(address(this),msg.value);
+        emit Minted(id,counter,amount,airplanePrice[id-1]*amount,inviteCode);
     }
+
 
     // The following functions are overrides required by Solidity.
 
@@ -89,13 +99,20 @@ contract Airplane is ERC1155, Ownable, ERC1155Supply,ERC1155Burnable,Withdraw{
         super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
     }
 
-    function getUserMessageHash(address _account,uint _nonce)public virtual pure returns(bytes32){
-        return keccak256(abi.encodePacked(_account,_nonce));
+     function _withdraw(address _to,uint _amount) private {
+        (bool sent,) = payable(_to).call{value: _amount}("");
+        require(sent, "Failed to send Ether");
+    }
+
+
+    function getUserMessageHash(address _account,uint _id,uint _nonce)public virtual pure returns(bytes32){
+        return keccak256(abi.encodePacked(_account,_id,_nonce));
     }
 
     function verify(bytes32 _msgHash, bytes memory _signature) public view returns (bool) {
         bytes32 _ethSignedMessageHash = ECDSA.toEthSignedMessageHash(_msgHash); 
         return ECDSA.recover(_ethSignedMessageHash, _signature) == signer;
     }
+
 
 }
