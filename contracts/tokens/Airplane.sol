@@ -13,15 +13,14 @@ contract Airplane is ERC1155, Ownable, ERC1155Supply,ERC1155Burnable,Withdraw{
     string public name;
     string public baseURI;
 
-    uint public counter;
-
     address public signer = 0x34D1330e3BA0B2cfB0fa606CAD0850Dc3eDDdCcd;
     mapping(address=>uint) public userNonce;
     mapping(address=>bool) public mintFree;
 
     uint[] public airplanePrice = [1 ether,2 ether,3 ether,4 ether];
 
-    event Minted(uint id,uint indexed itemId,uint indexed amount,uint indexed price, string inviteCode);
+    event AirMinted(uint indexed id,uint indexed amount,uint indexed price, string inviteCode);
+    event SignMinted(uint indexed itemId,uint indexed id,uint indexed amount,uint nonce);
 
     constructor(
         string memory _name,
@@ -49,42 +48,33 @@ contract Airplane is ERC1155, Ownable, ERC1155Supply,ERC1155Burnable,Withdraw{
         airplanePrice = _prices;
     }
 
-    function mintForFree(
-        address account,
-        uint id,
-        uint amount
-    ) public{
+    function mintForFree() public{
         require(!mintFree[msg.sender],"The user has already minted.");
-        counter++;
+
         mintFree[msg.sender] = true;
-        _mint(account, 0, 1, "0x");
-        emit Minted(id, counter,amount,0,"0x");
+        _mint(msg.sender, 1, 1, "0x");
+        emit AirMinted(1,1,0,"0x");
     }
 
-    function mintBySignForRewrads(address account,uint id,uint nonce,bytes calldata signature)external{
+    function mintBySignForRewrads(uint itemId,uint id,uint nonce,bytes calldata signature)external{
         require(userNonce[msg.sender] == nonce,"Nonce: Nonce error");
-
-        bytes32 _msgHash = getUserMessageHash(account,id,nonce);
+        bytes32 _msgHash = getUserMessageHash(msg.sender,id,nonce);
         require(verify(_msgHash, signature), "Signature: Error signature.");
-        _mint(account, id, 1, "0x");
-        counter++;
-        emit Minted(id, counter,1,0,"0x");
+        _mint(msg.sender, id, 1, "0x");
+        emit SignMinted(itemId,id,1,nonce);
     }
 
     function mint(
-        address account,
         uint256 id,
         uint256 amount,
         string calldata inviteCode
     ) public payable{
-        require(airplanePrice[id-1]>0,"The current id does not exist.");
-        require(msg.value >= airplanePrice[id-1]*amount);
-        counter++;
-        _mint(account, id, amount, "0x");
+        require(id>1 && id<6,"The current id does not exist.");
+        require(msg.value >= airplanePrice[id-2]*amount);
+        _mint(msg.sender, id, amount, "0x");
         _withdraw(address(this),msg.value);
-        emit Minted(id,counter,amount,airplanePrice[id-1]*amount,inviteCode);
+        emit AirMinted(id,amount,airplanePrice[id-2]*amount,inviteCode);
     }
-
 
     // The following functions are overrides required by Solidity.
 

@@ -16,8 +16,7 @@ async function main() {
 
     console.log(yohoBalance);
     console.log(bnbBalance);
-
-        
+    
    
 }
 

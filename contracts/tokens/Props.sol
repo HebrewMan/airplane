@@ -13,7 +13,6 @@ contract Props is ERC1155, Ownable, ERC1155Supply,ERC1155Burnable,Withdraw{
     string public name;
     string public baseURI;
 
-    uint public counter;
     uint[] public propsPrice = [1 ether,2 ether,3 ether,4 ether];
 
     address public signer = 0x34D1330e3BA0B2cfB0fa606CAD0850Dc3eDDdCcd;
@@ -21,7 +20,7 @@ contract Props is ERC1155, Ownable, ERC1155Supply,ERC1155Burnable,Withdraw{
 
     mapping(address=>bool) public mintFree;
 
-    event Minted(uint id,uint indexed itemId,uint indexed amount,uint indexed price, string inviteCode);
+    event ProMinted(uint indexed id,uint indexed amount,uint indexed price, string inviteCode);
 
     constructor(
         string memory _name,
@@ -49,18 +48,23 @@ contract Props is ERC1155, Ownable, ERC1155Supply,ERC1155Burnable,Withdraw{
         propsPrice = _prices;
     }
 
-    function mint(
-        address account,
+    function buy(
         uint256 id,
         uint256 amount,
         string calldata inviteCode
-    ) public payable{
-        require(propsPrice[id-1]>0,"The current id does not exist.");
-        require(msg.value >= propsPrice[id-1]*amount);
-        counter++;
-        _mint(account, id, amount, "0x");
+    ) public{
+        require(id>0 && id<5,"The current id does not exist.");
+        _mint(msg.sender, id, amount, "0x");
         IERC20(AIC).transferFrom(msg.sender, address(this), propsPrice[id-1]*amount);
-        emit Minted(id,counter,amount,propsPrice[id-1]*amount,inviteCode);
+        emit ProMinted(id,amount,propsPrice[id-1]*amount,inviteCode);
+    }
+
+    function mint(
+        uint256 id,
+        uint256 amount
+    ) public onlyOwner{
+        require(id>0 && id<5,"The current id does not exist.");
+        _mint(msg.sender, id, amount, "0x");
     }
 
     // The following functions are overrides required by Solidity.
@@ -76,7 +80,7 @@ contract Props is ERC1155, Ownable, ERC1155Supply,ERC1155Burnable,Withdraw{
         super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
     }
 
-     function _withdraw(address _to,uint _amount) private {
+    function _withdraw(address _to,uint _amount) private {
         (bool sent,) = payable(_to).call{value: _amount}("");
         require(sent, "Failed to send Ether");
     }
